@@ -1,82 +1,71 @@
 import Shape
 
-"""
-Gets the extreme Minkowski points
-"""
 def Support(shapeA, shapeB, direction):
-    extremeA = shapeA.FurthestPoint(direction) 
+    extremeA = shapeA.FurthestPoint(direction)
     extremeB = shapeB.FurthestPoint(-direction)
 
     return extremeA - extremeB
 
-"""
-Handle Line case of simplex 
-"""
-def HandleLineSimplex(simplex, direction):
-    pointA, newPoint = simplex
-
-    Aperp = (pointA - newPoint).tripleProd(-newPoint, pointA - newPoint)
-    direction = Aperp
-
-    return False  # A line itself will never enclose the origin.
-
-"""
-Triangle Case of simplex
-"""
-def HandleTriangleSimplex(simplex, direction):
-    #newPoint is the point most recently added,
-    #other points were added before, and will be removed,
-    #depencing on whether origin is enclosed.
-    pointA, pointB, newPoint = simplex
-
-    #Vectors perpendicular to A, B and newPoint
-    Aperp = (pointB - newPoint).tripleProd(pointA - newPoint, pointA - newPoint)
-    Bperp = (pointA - newPoint).tripleProd(pointB - newPoint, pointB - newPoint)
-
-       #Checks whether origin could be in possible regions.
-       #Returns false because collision has not happened, so continue
-       #till it does, with updated simplex.
-    if Bperp.dot(-newPoint) > 0:
-        simplex.remove(pointA)
-        direction = Bperp
-
-        return False
-
-    elif Aperp.dot(-newPoint) > 0:
-        simplex.remove(pointB)
-        direction = Aperp
-
-        return False
-
-    #If origin is not in the possible regions, it is contained
-    #in our simplex, so return True, indicating collision.
-    return True
-
-"""
-Updates simplex to continue checking, or detects collision.
-"""
-def HandleSimplex(simplex, direction):
+def HandleSimplex(simplex, direction, shapeA, shapeB):
     dim = len(simplex)
+    
+    # We will make a triangle, which is the simplex in 2D
+    if dim == 2:
+        C, B = simplex
 
-    if (dim == 2):
-        return HandleLineSimplex(simplex, direction)
+        BC = C - B
+        OC = -C
 
-    return HandleTriangleSimplex(simplex, direction)
+        # A line can contain the orign, but we won't check that here
+        direction = BC.tripleProd(OC, BC)
+        return False
 
-"""
-GJK Collision Algorithm.
-"""
-def GJK(shapeA, shapeB):
-    direction = (shapeB.getCentre() - shapeA.getCentre())
-    simplex = [Support(shapeA, shapeB, direction)] 
+    # We have our simplex. Now we find out if it encloses the origin
+    elif dim == 3:
+        C, B, A = simplex
+
+        OA = -A
+        BA = B - A
+        CA = C - A
+
+        # The triple product gives the direction perpendicular to both the lines
+        BAperp = CA.tripleProd(BA, BA)
+        CAperp = BA.tripleProd(CA, CA)
+
+        # The triple product divides the region into voronoi regions. 
+        # We can, through theory, eliminate the need to check many of the regions
+        # We will check the rest here using the dot product.
+
+        if BAperp.dot(OA) > 0:
+            simplex.remove(C) 
+            direction = BAperp
+
+            return False
+        
+        elif CAperp.dot(OA) > 0:
+            simplex.remove(B)
+            direction = CAperp
+
+            return False
+
+        else:
+            return True
+
+
+def GJK(shapeA, shapeB): 
+   
+    direction = shapeA.getCentre() - shapeB.getCentre()
+    simplex = [Support(shapeA, shapeB, direction)]
     direction = -simplex[0]
-
+ 
     while True:
+
+        # Updating simplex and checking potential point.
         newPoint = Support(shapeA, shapeB, direction)
 
         if newPoint.dot(direction) < 0:
             return False
 
-        simplex.append(newPoint) 
-        if HandleSimplex(simplex, direction):
+        simplex.append(newPoint)
+        if HandleSimplex(simplex, direction, shapeA, shapeB):
             return True
