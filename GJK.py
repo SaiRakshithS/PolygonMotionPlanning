@@ -1,32 +1,66 @@
 import Shape
 
-def Support(shapeA, shapeB, direction):
+def GJK(shapeA : Shape.Polygon, shapeB : Shape.Polygon):
+
+    direction = shapeA.getCentre() - shapeB.getCentre()
+    simplex = [Support(shapeA, shapeB, direction)]
+    direction.set(-simplex[0])
+
+    while True:
+
+        # Updating simplex and checking potential point.
+        newPoint = Support(shapeA, shapeB, direction)
+
+        if newPoint.dot(direction) <= 0:
+            return False
+
+        simplex.append(newPoint)
+        if HandleSimplex(simplex, direction):
+            return True
+
+
+def Support(shapeA : Shape.Polygon, shapeB : Shape.Polygon, direction : Shape.Vector3):
+
     extremeA = shapeA.FurthestPoint(direction)
     extremeB = shapeB.FurthestPoint(-direction)
 
     return extremeA - extremeB
 
-def HandleSimplex(simplex, direction, shapeA, shapeB):
+
+def HandleSimplex(simplex : list, direction : Shape.Vector3):
     dim = len(simplex)
     
-    # We will make a triangle, which is the simplex in 2D
     if dim == 2:
         C, B = simplex
 
         BC = C - B
-        OC = -C
+        OC = C
 
-        # A line can contain the orign, but we won't check that here
-        direction = BC.tripleProd(OC, BC)
-        return False
+        # Check if line contains the origin
+        if B.cross(C) == Shape.Origin:
+            return True
+    
+        else: 
+            direction.set(BC.tripleProd(OC, BC))
+            return False
 
     # We have our simplex. Now we find out if it encloses the origin
     elif dim == 3:
         C, B, A = simplex
 
-        OA = -A
+        OA = A
         BA = B - A
         CA = C - A
+
+        #Checking Edge Cases
+        if A.cross(B) == Shape.Origin:
+            return True
+
+        elif A.cross(C) == Shape.Origin:
+            return True
+
+        elif B.cross(C) == Shape.Origin:
+            return True
 
         # The triple product gives the direction perpendicular to both the lines
         BAperp = CA.tripleProd(BA, BA)
@@ -38,34 +72,15 @@ def HandleSimplex(simplex, direction, shapeA, shapeB):
 
         if BAperp.dot(OA) > 0:
             simplex.remove(C) 
-            direction = BAperp
+            direction.set(BAperp)
 
             return False
         
         elif CAperp.dot(OA) > 0:
             simplex.remove(B)
-            direction = CAperp
+            direction.set(CAperp)
 
             return False
 
-        else:
-            return True
-
-
-def GJK(shapeA, shapeB): 
-   
-    direction = shapeA.getCentre() - shapeB.getCentre()
-    simplex = [Support(shapeA, shapeB, direction)]
-    direction = -simplex[0]
- 
-    while True:
-
-        # Updating simplex and checking potential point.
-        newPoint = Support(shapeA, shapeB, direction)
-
-        if newPoint.dot(direction) < 0:
-            return False
-
-        simplex.append(newPoint)
-        if HandleSimplex(simplex, direction, shapeA, shapeB):
+        else: 
             return True
