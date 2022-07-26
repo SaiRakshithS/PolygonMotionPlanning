@@ -1,6 +1,6 @@
 import Shape
 
-def GJK(shapeA : Shape.Polygon, shapeB : Shape.Polygon):
+def GJK(shapeA : Shape.Polygon, shapeB : Shape.Polygon) -> bool:
 
     direction = shapeA.getCentre() - shapeB.getCentre()
     simplex = [Support(shapeA, shapeB, direction)]
@@ -27,7 +27,7 @@ def Support(shapeA : Shape.Polygon, shapeB : Shape.Polygon, direction : Shape.Ve
     return extremeA - extremeB
 
 
-def HandleSimplex(simplex : list, direction : Shape.Vector3):
+def HandleSimplex(simplex : list, direction : Shape.Vector3) -> bool:
     dim = len(simplex)
     
     if dim == 2:
